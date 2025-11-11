@@ -84,6 +84,7 @@ function App() {
             toAmount={toAmount}
             exchangeRate={exchangeRate}
             error={error}
+            isLoading={isLoading}
           />
 
           <ErrorMessage message={error} />

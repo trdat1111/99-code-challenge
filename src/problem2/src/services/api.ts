@@ -1,51 +1,102 @@
 import { Token } from '../types';
 
-// Mock API data with real token prices (for demonstration)
-const MOCK_TOKENS: Token[] = [
-  { currency: 'ETH', price: 3500.25 },
-  { currency: 'BTC', price: 65000.50 },
-  { currency: 'USDT', price: 1.0 },
-  { currency: 'BNB', price: 635.75 },
-  { currency: 'ADA', price: 1.25 },
-  { currency: 'SOL', price: 145.80 },
-  { currency: 'DOT', price: 8.45 },
-  { currency: 'MATIC', price: 0.85 },
-  { currency: 'LINK', price: 22.30 },
-  { currency: 'UNI', price: 12.65 }
-];
+// Fetch token icons from Switcheo GitHub repository
+const fetchTokenIcon = async (symbol: string): Promise<string> => {
+  const iconUrl = `https://raw.githubusercontent.com/Switcheo/token-icons/main/tokens/${symbol}.svg`;
+  const response = await fetch(iconUrl);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch icon for ${symbol}: ${response.status}`);
+  }
+  
+  return iconUrl;
+};
 
-// Simulate network delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Fetch token prices from Switcheo API
+const fetchTokenPrices = async (): Promise<{ [key: string]: number }> => {
+  const response = await fetch('https://interview.switcheo.com/prices.json');
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch prices: ${response.status} ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  
+  // Create a price map by symbol
+  const priceMap: { [key: string]: number } = {};
+  data.forEach((item: any) => {
+    if (item.currency && typeof item.price === 'number') {
+      priceMap[item.currency] = item.price;
+    }
+  });
+  
+  return priceMap;
+};
 
 export const fetchTokens = async (): Promise<Token[]> => {
-  await delay(800); // Simulate API call delay
-  return MOCK_TOKENS;
+  // Add a small delay to show loading state
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  const prices = await fetchTokenPrices();
+  
+  // Get unique currency symbols from the price data
+  const currencies = Object.keys(prices);
+  
+  const tokens = await Promise.all(
+    currencies.map(async (currency) => {
+      try {
+        const icon = await fetchTokenIcon(currency);
+        return {
+          currency,
+          price: prices[currency],
+          icon
+        };
+      } catch (iconError) {
+        // If icon fetch fails, still include the token without icon
+        console.warn(`Could not fetch icon for ${currency}:`, iconError);
+        return {
+          currency,
+          price: prices[currency]
+        };
+      }
+    })
+  );
+  
+  // Filter out tokens with invalid prices and sort by currency
+  return tokens
+    .filter(token => token.price > 0)
+    .sort((a, b) => a.currency.localeCompare(b.currency));
 };
 
 export const fetchExchangeRate = async (from: string, to: string): Promise<number> => {
-  await delay(400); // Simulate API call delay
-  
   if (from === to) return 1;
   
-  const fromToken = MOCK_TOKENS.find(token => token.currency === from);
-  const toToken = MOCK_TOKENS.find(token => token.currency === to);
+  // Add a small delay to show loading state  
+  await new Promise(resolve => setTimeout(resolve, 300));
   
-  if (!fromToken || !toToken) {
+  const prices = await fetchTokenPrices();
+  
+  const fromPrice = prices[from];
+  const toPrice = prices[to];
+  
+  if (!fromPrice || !toPrice) {
     throw new Error(`Exchange rate not available for ${from}/${to}`);
   }
   
-  // Calculate exchange rate based on USD prices
-  const rate = fromToken.price / toToken.price;
+  if (fromPrice <= 0 || toPrice <= 0) {
+    throw new Error(`Invalid price data for ${from}/${to}`);
+  }
   
-  // Add small random fluctuation to simulate real market conditions
-  const fluctuation = 0.98 + Math.random() * 0.04; // ±2% fluctuation
-  return rate * fluctuation;
+  // Calculate exchange rate based on USD prices
+  return fromPrice / toPrice;
 };
 
 export const submitSwap = async (swapData: { from: string; to: string; amount: number }) => {
-  await delay(1500); // Simulate processing time
+  // Add a realistic delay to show loading state (1.5-3 seconds)
+  const delay = 1500 + Math.random() * 1500;
+  await new Promise(resolve => setTimeout(resolve, delay));
   
-  // Simulate random success/failure
+  // Simulate random success/failure (keeping some randomness for demo purposes)
   if (Math.random() > 0.1) { // 90% success rate
     return {
       success: true,

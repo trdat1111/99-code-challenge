@@ -5,6 +5,7 @@ interface ExchangeRateProps {
   toAmount: string;
   exchangeRate: number;
   error: string;
+  isLoading?: boolean;
 }
 
 export const ExchangeRate: React.FC<ExchangeRateProps> = ({
@@ -13,9 +14,27 @@ export const ExchangeRate: React.FC<ExchangeRateProps> = ({
   fromAmount,
   toAmount,
   exchangeRate,
-  error
+  error,
+  isLoading = false
 }) => {
-  if (error || !fromToken || !toToken || exchangeRate === 0) {
+  if (error || !fromToken || !toToken) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="exchange-rate">
+        <div className="exchange-rate-info">
+          <span className="exchange-rate-text" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="loading-spinner-small"></div>
+            Calculating exchange rate...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (exchangeRate === 0) {
     return null;
   }
 
